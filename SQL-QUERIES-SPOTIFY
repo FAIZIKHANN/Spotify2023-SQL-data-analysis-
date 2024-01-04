@@ -1,0 +1,125 @@
+-----------What are the top 5 songs on spotify in 2023? 
+
+select *
+from spotify2023
+ORDER by streams desc 
+limit 5;
+
+
+-------What are all the top 5 songs with multiple artists?
+
+select artists_name, track_name
+from spotify2023
+where artist_count > 1
+ORDER by streams desc 
+limit 5;
+
+
+------Who are the different artists? Note that this will NOT include artists that are featured on songs:
+
+
+SELECT DISTINCT artists_name
+FROM spotify2023
+WHERE artist_count =1
+ORDER by artists_name;
+
+-------How many top songs are in more than 500 spotify playlsts and more than 1 artist?
+
+SELECT COUNT(*)
+from spotify2023
+where artist_count > 1 and in_spotify_playlists > 500
+
+
+-------How many songs have multiple artists AND over 1 billion streams?
+
+SELECT COUNT(*) as num_artist
+from spotify2023
+where artist_count > 1 and streams > 1000000000;
+
+
+-------What are the top 5 songs that have the word "Love" in the track name?
+
+SELECT track_name
+from spotify2023
+where track_name like '%Love%'
+order by streams desc
+limit 5 ;
+
+
+
+------What are the average streams per day on spotify for each song?
+
+
+SELECT *, 
+ DATEDIFF(day, release_date, GETDATE()) AS elapsed_time_in_days, 
+ ROUND(streams / NULLIF(DATEDIFF(day, release_date, GETDATE()), 0), 0) AS avg_streams_per_day
+FROM spotify2023
+ORDER BY avg_streams_per_day DESC
+LIMIT 5;
+
+
+------ group the songs into quartiles to determine which songs are the most popular
+
+SELECT NTILE (4) OVER (
+    ORDER BY streams DESC
+  ) AS 'top_stream_groups',
+  track_name, artists_name, streams
+FROM spotify2023
+
+
+-------What is the running total amount of streams for Ed Sheeran?
+
+SELECT artists_name, track_name, released_date, streams,
+sum(streams) over (partition by artists_name order by released_date) as running_total_stream
+from spotify2023
+where artists_name = 'Ed Sheeran'
+
+
+----What are the average streams based on 'Key'? Which key has the most streams?demo
+
+SELECT key, avg(streams) as key_stream
+from spotify2023
+where key is not null
+GROUP by key
+ORDER by key_stream DESC
+
+
+-----Determine the 'grooviness' of each song:
+
+SELECT track_name, artist_s_name, CASE 
+	WHEN danceability > 80 THEN 'The Grooviest'
+	WHEN danceability > 60 THEN 'Groovy'
+	WHEN danceability > 40 THEN 'Somewhat Groovy'
+	WHEN danceability > 20 THEN 'Barely Groovy'
+	ELSE 'Not Groovy'
+  END AS 'The_Groovy_Scale'
+FROM spotify2023
+ORDER BY The_Groovy_Scale;
+
+
+-----What is the most streamed single for each artist?
+
+select max(streams)as most_stream, artists_name, track_name
+from spotify2023
+where artist_count = 1 and streams is not null
+GROUP by artists_name,track_name
+ORDER by most_stream DESC
+
+
+----Which artist has the most songs released in 2023 that are in the top spotify charts?
+
+
+select  artists_name, count(*) total_released
+from spotify2023
+where released_year = 2023
+group by artists_name 
+ORDER by total_released DESC
+
+
+-----What percentage of songs in the top 2023 spotify songs were actually released in 2023?
+
+with cte as (select count(*) total_count , sum(case when released_year = '2023' then 1 else 0 end) as total_2023
+from spotify2023)
+
+SELECT (total_2023 * 100/ total_count) as percentage_released_in_2023
+from cte 
